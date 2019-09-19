@@ -1,0 +1,17 @@
+arm_64bit=1
+core_freq=250
+enable_uart=1
+#
+# I tried both with == 0 and == 1.
+# The legacy intc is not affected.
+#
+enable_gic=1
+#total_mem=1024
+
+armstub=RPI_EFI.fd
+disable_commandline_tags=1
+
+hdmi_group=2
+hdmi_mode=85
+config_hdmi_boost=11
+disable_overscan=1

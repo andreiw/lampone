@@ -1,0 +1,11 @@
+arm_control=0x200
+enable_uart=1
+armstub=RPI_EFI.fd
+disable_commandline_tags=1
+never_over_voltage=1
+force_turbo=1
+hdmi_group=2
+hdmi_mode=85
+config_hdmi_boost=11
+disable_overscan=1
+
