@@ -30,7 +30,7 @@ usage()
 error()
 {
     echo
-    echo $0 error: $@
+    echo $0 error: $@ 1>&2
     echo
     exit
 }
