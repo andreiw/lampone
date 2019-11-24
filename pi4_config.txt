@@ -1,17 +1,51 @@
-arm_64bit=1
-core_freq=250
-enable_uart=1
 #
-# I tried both with == 0 and == 1.
-# The legacy intc is not affected.
+# You must have these 4 files in the root of your media:
+# bcm2711-rpi-4-b.dtb
+# fixup4.dat
+# start4.elf
+# config.txt (this file)
+# RPI_EFI.fd
 #
-enable_gic=1
-#total_mem=1024
+# Note: You must have the DTB even if you don't intend on using it, or
+# expect weird stuff (CPU frequency issues, non-working UART).
+#
 
+arm_64bit=1
+enable_uart=1
+core_freq=250
+enable_gic=1
 armstub=RPI_EFI.fd
 disable_commandline_tags=1
 
+#
+# If you want to pass a specific DTB (with working overlays and all),
+# this is how you do it. Do not mess with the hex values.
+#
+#disable_commandline_tags=2
+#device_tree_address=0x20000
+#device_tree_end=0x30000
+#device_tree=your.dtb
+
+#
+# These are safe defaults for HDMI
+#
 hdmi_group=2
 hdmi_mode=85
 config_hdmi_boost=11
 disable_overscan=1
+
+#
+# For the Miuzei 4" IPS screen
+# https://www.amazon.com/Miuzei-Raspberry-Full-Angle-Heatsinks-Raspbian/dp/B07XBVF1C9
+#
+#hdmi_group=2
+#hdmi_mode=87
+#config_hdmi_boost=11
+#display_hdmi_rotate=3
+#disable_overscan=1
+#hdmi_cvt=480 800 62.3 3 0 0 0
+
+#
+# Weird stuff.
+#
+#total_mem=1024

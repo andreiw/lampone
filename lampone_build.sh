@@ -17,7 +17,7 @@ usage()
     echo
     echo Usage: $0 [-d dir] [-p plat] [-t type]
     echo "-d dir  - workspace directory to use (default rpi_fw)"    
-    echo "-p plat - rpi3 (default) or rpi4"
+    echo "-p plat - rpi4 (default) or rpi3"
     echo "-t type - DEBUG or RELEASE (default)"
     echo
     exit
@@ -38,14 +38,28 @@ build_tfa()
     #
     pushd tf-a
     export CROSS_COMPILE=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-    make PLAT=${PLAT} PRELOADED_BL33_BASE=0x30000 RPI3_PRELOADED_DTB_BASE=0x10000 SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 fip all
+
+    if [[ x"${TFA_PLAT}" = x"rpi3" ]]; then
+        DTB_BASE=0x10000
+        BL33_BASE=0x30000
+        TARGETS="fip all"
+        TARGET_SRC="${PWD}/build/${PLAT}/release/bl1.bin ${PWD}/build/${PLAT}/release/fip.bin"
+    else
+        DTB_BASE=0x20000
+        BL33_BASE=0x30000
+        TARGETS="all"
+        TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
+    fi
+
+    make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${TARGETS}
+
     if [[ $? -ne 0 ]]; then
         echo TF-A build failed
         exit
     fi
-    export TFA_BUILD_DIR=${PWD}/build/$PLAT/release
     echo
-    echo TF-A artifacts are under ${TFA_BUILD_DIR}
+    echo TF-A artifacts are ${TARGET_SRC}
+    cp ${TARGET_SRC} ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
     echo
     popd
 }
@@ -68,7 +82,16 @@ prep_edk2()
 
     pushd edk2-platforms
     if [[ ! x"${PLAT}" = x"rpi3" ]]; then
-        git checkout pi4-hack
+        git checkout remotes/origin/pi4_dev2
+
+    else
+        git checkout master
+    fi
+    popd
+
+    pushd edk2-non-osi
+    if [[ ! x"${PLAT}" = x"rpi3" ]]; then
+        git checkout remotes/origin/pi4_dev1
     else
         git checkout master
     fi
@@ -81,42 +104,42 @@ build_edk2()
     BUILD_COMMIT=`git rev-parse --short HEAD`
     popd
     BUILD_DATE=`date +%m/%d/%Y`
-    COMMON_OPTS="-DTFA_BUILD_DIR=${TFA_BUILD_DIR}"
     NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
-    build -n $NUM_CPUS -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/RPi3/RPi3.dsc ${COMMON_OPTS}  --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}"
+
+    build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}"
     if [[ $? -ne 0 ]]; then
         error UEFI build failed
     fi
     echo
-    echo Finished building ${BASEDIR}/Build/RPi3/${TYPE}_GCC5/FV/RPI_EFI.fd
+    echo Finished building ${BASEDIR}/Build/${UEFI_PLAT}/${TYPE}_GCC5/FV/RPI_EFI.fd
     echo
 }
 
 #
 # Defaults.
 #
-export BASEDIR=rpi_fw
-export TYPE=RELEASE
-export PLAT=rpi3
+BASEDIR=rpi_fw
+TYPE=RELEASE
+PLAT=rpi4
 
 while getopts d:p:t: OPTION; do
-    case $OPTION in
+    case ${OPTION} in
         d)
-            export BASEDIR=${OPTARG}
+            BASEDIR=${OPTARG}
             ;;
         p)
-            if [[ ! x"$OPTARG" = x"rpi3" ]] && [[ ! x"$OPTARG" = x"rpi4" ]]; then
+            if [[ ! x"${OPTARG}" = x"rpi3" ]] && [[ ! x"${OPTARG}" = x"rpi4" ]]; then
                 usage
             fi
                       
-            export PLAT=${OPTARG}
+            PLAT=${OPTARG}
             ;;
         t)
-            if [[ ! x"$OPTARG" = x"DEBUG" ]] && [[ ! x"$OPTARG" = x"RELEASE" ]]; then
+            if [[ ! x"${OPTARG}" = x"DEBUG" ]] && [[ ! x"${OPTARG}" = x"RELEASE" ]]; then
                 usage
             fi
                       
-            export TYPE=${OPTARG}
+            TYPE=${OPTARG}
             ;;
         *)
             usage
@@ -125,7 +148,7 @@ while getopts d:p:t: OPTION; do
 done
 shift $((OPTIND - 1))
 
-export BASEDIR=${PWD}/${BASEDIR}
+BASEDIR=${PWD}/${BASEDIR}
 if [ ! -d "${BASEDIR}" ]; then
     echo Creating ${BASEDIR}
     mkdir ${BASEDIR}
@@ -134,6 +157,14 @@ fi
 echo Workspace is ${BASEDIR}
 echo Building ${TYPE} for ${PLAT}
 cd ${BASEDIR}
+
+if [[ x"${PLAT}" = x"rpi3" ]]; then
+    UEFI_PLAT=RPi3
+    TFA_PLAT=rpi3
+else
+    UEFI_PLAT=RPi4
+    TFA_PLAT=rpi4
+fi
 
 if [ ! -d "gcc5" ]; then
     mkdir gcc5
@@ -145,26 +176,26 @@ fi
 export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 
 if [ ! -d "edk2" ]; then
-    git clone https://github.com/tianocore/edk2.git edk2
+    git clone https://github.com/ardbiesheuvel/edk2 edk2
     pushd edk2
     #
-    # Known good SHA for platforms/non-osi forks below.
+    # Known good SHA/branch for platforms/non-osi forks below.
     #
-    git checkout b0c15fb128c518b9acd8611a2deea213e9e55193
+    git checkout remotes/origin/rpi4
     git submodule update --init
     popd
 fi
 
 if [ ! -d "edk2-platforms" ]; then
-    git clone https://github.com/andreiw/lampone-edk2-platforms edk2-platforms
+    git clone https://github.com/pftf/edk2-platforms edk2-platforms
 fi
 
 if [ ! -d "edk2-non-osi" ]; then
-    git clone https://github.com/andreiw/lampone-edk2-non-osi edk2-non-osi
+    git clone https://github.com/pftf/edk2-non-osi edk2-non-osi
 fi
 
 if [ ! -d "tf-a" ]; then
-    git clone https://github.com/andreiw/lampone-tf-a tf-a
+    git clone https://github.com/ARM-software/arm-trusted-firmware tf-a
 fi
 
 build_tfa

@@ -2,10 +2,20 @@ arm_control=0x200
 enable_uart=1
 armstub=RPI_EFI.fd
 disable_commandline_tags=1
-never_over_voltage=1
-force_turbo=1
+
+#
+# If you want to pass a specific DTB (with working overlays and all),
+# this is how you do it. Do not mess with the hex values.
+#
+#disable_commandline_tags=2
+#device_tree_address=0x10000
+#device_tree_end=0x20000
+#device_tree=your.dtb
+
+#
+# These are safe defaults for HDMI
+#
 hdmi_group=2
 hdmi_mode=85
 config_hdmi_boost=11
 disable_overscan=1
-
