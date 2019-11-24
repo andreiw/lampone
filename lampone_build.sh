@@ -1,9 +1,10 @@
 #!/bin/bash
 
 #
-# This script assembles a Pi 3 or (hacky) Pi 4 UEFI build today,
-# from forked versions of upstream UEFI (edk2-platforms) and
-# TF-A. It will download all dependencies, including GCC, but is
+# This script assembles a Pi 3 or (WiP) Pi 4 UEFI build today,
+# from forked versions of upstream UEFI.
+#
+# It will download all dependencies, including GCC, but is
 # reasonably smart about it.
 #
 # Only tried in Ubuntu.
