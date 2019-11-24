@@ -12,6 +12,9 @@
 #  ./lampone_build.sh -d lampone-wip/ -p rpi4 -t DEBUG
 #  ./lampone_build.sh -d lampone-wip/ -p rpi3 -t RELEASE
 #
+# For Ubuntu, outside of make, python3 and a local toolchain:
+# $ apt-get update && apt-get install -y uuid-dev iasl
+#
 usage()
 {
     echo
