@@ -16,6 +16,10 @@
 # For Ubuntu, outside of make, python3 and a local toolchain:
 # $ apt-get update && apt-get install -y uuid-dev iasl
 #
+
+# Fail if a command fails
+set -e
+
 usage()
 {
     echo
