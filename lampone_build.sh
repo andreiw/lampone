@@ -20,6 +20,9 @@
 # Fail if a command fails
 set -e
 
+# Load configuration
+. $(dirname $(which "$0"))/config
+
 usage()
 {
     echo
@@ -58,6 +61,8 @@ build_tfa()
         TARGETS="all"
         TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
     fi
+
+    git submodule update --init
 
     make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${TARGETS}
 
@@ -183,28 +188,56 @@ if [ ! -d "gcc5" ]; then
 fi
 export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 
-if [ ! -d "edk2" ]; then
-    git clone https://github.com/ardbiesheuvel/edk2 edk2
-    pushd edk2
-    #
-    # Known good SHA/branch for platforms/non-osi forks below.
-    #
-    git checkout remotes/origin/rpi4
-    git submodule update --init
-    popd
-fi
+for dir in $repositories
+do
+	varname="$dir"
+	while [ "${varname%-*}" != "$varname" ]
+	do varname="${varname%%-*}_${varname#*-}"
+	done
 
-if [ ! -d "edk2-platforms" ]; then
-    git clone https://github.com/pftf/edk2-platforms edk2-platforms
-fi
+	url="$(eval echo "\"\$$varname\"")"
 
-if [ ! -d "edk2-non-osi" ]; then
-    git clone https://github.com/pftf/edk2-non-osi edk2-non-osi
-fi
+	branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
 
-if [ ! -d "tf-a" ]; then
-    git clone https://github.com/ARM-software/arm-trusted-firmware tf-a
-fi
+	commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
+
+	origin="${url#https://github.com/}"
+	origin="${origin%%/*}"
+
+	if [ ! -d "$dir" ]
+	then
+		git clone -o "$origin" -b "${branches%% *}" --single-branch "$url" "$dir"
+		cd "$dir"
+		git remote set-branches "$origin" $branches
+
+		if [ "${branches%% *}" != "${branches}" ]
+		then
+			git fetch -n --multiple "$origin" $branches
+		fi
+
+	else
+		cd "$dir"
+
+		if ! cur=`git remote get-url "$origin" 2>/dev/null`
+		then
+			git remote add "$origin" "$url"
+		elif [ "$cur" != "$url" ]
+		then
+			git remote remove "$origin"-old >/dev/null 2>&1 || true
+			git remote rename "$origin" "$origin"-old >/dev/null 2>&1
+			git remote add "$origin" "$url"
+		fi
+
+		git remote set-branches --add "$origin" $branches
+
+		git fetch -n "$origin" $branches
+	fi
+
+	[ -n "$commit" ] || commit="remotes/$origin/${branches%% *}"
+	git checkout "$commit"
+
+	cd ..
+done
 
 build_tfa
 prep_edk2

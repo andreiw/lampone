@@ -1,0 +1,18 @@
+#
+# Configuration for Raspberry PI building
+#
+
+#
+## Repository configuration
+#
+
+### List of repositories to check out
+repositories=""
+
+### Configuration of individual repositories
+
+#directives:
+#<repo>="<some url>"
+#<repo>_branches="<list of branches to check out, MUST include at least one!>"
+#<repo>_commit_id="<specific commit to check out>"
+
