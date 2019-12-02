@@ -13,6 +13,10 @@ repositories=""
 
 #directives:
 #<repo>="<some url>"
-#<repo>_branches="<list of branches to check out, MUST include at least one!>"
+#<repo>_branches="<list of branches to check out>"
 #<repo>_commit_id="<specific commit to check out>"
+
+# NOTE: <repo>_branches settings MUST be present and MUST include at least one
+# branch.  If more than one branch is listed, the branch for the RP4 must be
+# first and the branch for the RP3 must be last.
 

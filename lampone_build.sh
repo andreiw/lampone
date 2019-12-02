@@ -92,23 +92,6 @@ prep_edk2()
     fi
 
     source edk2/edksetup.sh
-
-    pushd edk2-platforms
-    if [[ ! x"${PLAT}" = x"rpi3" ]]; then
-        git checkout remotes/origin/pi4_dev2
-
-    else
-        git checkout master
-    fi
-    popd
-
-    pushd edk2-non-osi
-    if [[ ! x"${PLAT}" = x"rpi3" ]]; then
-        git checkout remotes/origin/pi4_dev1
-    else
-        git checkout master
-    fi
-    popd
 }
 
 build_edk2()
@@ -188,6 +171,12 @@ if [ ! -d "gcc5" ]; then
 fi
 export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 
+# Portions of firmware built from tf-a get copied in and need to be cleaned
+# before doing checkout; otherwise `git checkout` will fail.
+cd edk2-non-osi
+git checkout Platform/RaspberryPi/RPi[34]/TrustedFirmware/*.bin
+cd ..
+
 for dir in $repositories
 do
 	varname="$dir"
@@ -233,7 +222,13 @@ do
 		git fetch -n "$origin" $branches
 	fi
 
-	[ -n "$commit" ] || commit="remotes/$origin/${branches%% *}"
+	if [ -z "$commit" ]
+	then
+		if [ x"${PLAT}" != x"rpi3" ]
+		then commit="remotes/$origin/${branches%% *}"
+		else commit="remotes/$origin/${branches##* }"
+		fi
+	fi
 	git checkout "$commit"
 
 	cd ..
