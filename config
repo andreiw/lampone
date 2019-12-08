@@ -1,0 +1,34 @@
+#
+# Configuration for Raspberry PI building
+#
+
+#
+## Repository configuration
+#
+
+### List of repositories to check out
+repositories="edk2 edk2-platforms edk2-non-osi tf-a"
+
+### Configuration of individual repositories
+
+#directives:
+#<repo>="<some url>"
+#<repo>_branches="<list of branches to check out>"
+#<repo>_commit_id="<specific commit to check out>"
+
+# NOTE: <repo>_branches settings MUST be present and MUST include at least one
+# branch.  If more than one branch is listed, the branch for the RP4 must be
+# first and the branch for the RP3 must be last.
+
+edk2="https://github.com/pftf/edk2.git"
+edk2_branches="pi4_dev2"
+
+edk2_platforms="https://github.com/pftf/edk2-platforms.git"
+edk2_platforms_branches="pi4_dev2 master"
+
+edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
+edk2_non_osi_branches="pi4_dev1 master"
+
+tf_a="https://github.com/ARM-software/arm-trusted-firmware.git"
+tf_a_branches="master"
+
