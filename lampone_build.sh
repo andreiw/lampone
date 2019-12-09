@@ -62,8 +62,6 @@ build_tfa()
         TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
     fi
 
-    git submodule update --init
-
     make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${TARGETS}
 
     if [[ $? -ne 0 ]]; then
@@ -171,12 +169,6 @@ if [ ! -d "gcc5" ]; then
 fi
 export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 
-# Portions of firmware built from tf-a get copied in and need to be cleaned
-# before doing checkout; otherwise `git checkout` will fail.
-cd edk2-non-osi
-git checkout Platform/RaspberryPi/RPi[34]/TrustedFirmware/*.bin
-cd ..
-
 for dir in $repositories
 do
 	varname="$dir"
@@ -193,45 +185,46 @@ do
 	origin="${url#https://github.com/}"
 	origin="${origin%%/*}"
 
-	if [ ! -d "$dir" ]
+	if [ x"${PLAT}" != x"rpi3" ]
+	then branch="${branches%% *}"
+	else branch="${branches##* }"
+	fi
+
+	if [ -z "${commit}" ]
 	then
-		git clone -o "$origin" -b "${branches%% *}" --single-branch "$url" "$dir"
-		cd "$dir"
-		git remote set-branches "$origin" $branches
+		commit="remotes/${origin}/${branch}"
+	fi
+
+	if [ ! -d "${dir}" ]
+	then
+		git clone --recursive -o "${origin}" -b "${branch}" --single-branch "${url}" "${dir}"
+		pushd "${dir}"
+		git remote set-branches "${origin}" ${branches}
 
 		if [ "${branches%% *}" != "${branches}" ]
 		then
-			git fetch -n --multiple "$origin" $branches
+			git fetch -n --multiple "${origin}"
 		fi
 
+		git checkout --track "${commit}"
 	else
-		cd "$dir"
+		pushd "${dir}"
 
 		if ! cur=`git remote get-url "$origin" 2>/dev/null`
 		then
-			git remote add "$origin" "$url"
-		elif [ "$cur" != "$url" ]
+			git remote add "${origin}" "${url}"
+		elif [ "${cur}" != "${url}" ]
 		then
-			git remote remove "$origin"-old >/dev/null 2>&1 || true
-			git remote rename "$origin" "$origin"-old >/dev/null 2>&1
-			git remote add "$origin" "$url"
+			error Repo URLs changed for "${dir}", use a workspace
 		fi
 
-		git remote set-branches --add "$origin" $branches
-
-		git fetch -n "$origin" $branches
+		git remote set-branches "${origin}" ${branches}
+		git fetch -n --multiple "${origin}"
+		git checkout "${branch}"
+		git pull --rebase --autostash
 	fi
 
-	if [ -z "$commit" ]
-	then
-		if [ x"${PLAT}" != x"rpi3" ]
-		then commit="remotes/$origin/${branches%% *}"
-		else commit="remotes/$origin/${branches##* }"
-		fi
-	fi
-	git checkout "$commit"
-
-	cd ..
+	popd
 done
 
 build_tfa
