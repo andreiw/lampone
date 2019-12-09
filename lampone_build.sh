@@ -81,7 +81,7 @@ sync_repo()
     local commit_is_branch="false"
     local branch="${branches%% *}"
 
-    if [ x"${PLAT}" == x"rpi3" ]; then
+    if [ x"${PLAT}" = x"rpi3" ]; then
         branch="${branches##* }"
     fi
 
@@ -100,7 +100,11 @@ sync_repo()
             git fetch -n --multiple "${origin}"
         fi
 
-        git checkout --track "${commit}"
+        if  [[ x"${commit_is_branch}" = x"true" ]]; then
+            git checkout "${branch}"
+        else
+            git checkout "${commit}"
+        fi
     elif [[ x"${commit_is_branch}" = x"true" ]]; then
         info ${dir}: rebasing to ${commit}
         pushd "${dir}"
