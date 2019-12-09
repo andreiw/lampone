@@ -50,6 +50,78 @@ info()
     echo
 }
 
+sync_tools()
+{
+    if [ ! -d "gcc5" ]; then
+        mkdir gcc5
+        pushd gcc5
+        wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+        tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+        popd
+    fi
+
+    TOOLS_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+
+    info Tools are ${TOOLS_PREFIX}
+}
+
+sync_repo()
+{
+    local dir=$1
+    local varname="${dir}"
+    while [ "${varname%-*}" != "$varname" ]; do
+        varname="${varname%%-*}_${varname#*-}"
+    done
+
+    local url="$(eval echo "\"\$$varname\"")"
+    local branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
+    local commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
+    local origin="${url#https://github.com/}"
+    origin="${origin%%/*}"
+    local commit_is_branch="false"
+    local branch="${branches%% *}"
+
+    if [ x"${PLAT}" == x"rpi3" ]; then
+        branch="${branches##* }"
+    fi
+
+    if [ -z "${commit}" ]; then
+        commit="remotes/${origin}/${branch}"
+        commit_is_branch="true"
+    fi
+
+    if [ ! -d "${dir}" ]; then
+        info ${dir}: checking out ${commit}
+        git clone --recursive -o "${origin}" -b "${branch}" --single-branch "${url}" "${dir}"
+        pushd "${dir}"
+        git remote set-branches "${origin}" ${branches}
+
+        if [ "${branches%% *}" != "${branches}" ]; then
+            git fetch -n --multiple "${origin}"
+        fi
+
+        git checkout --track "${commit}"
+    elif [[ x"${commit_is_branch}" = x"true" ]]; then
+        info ${dir}: rebasing to ${commit}
+        pushd "${dir}"
+
+        if ! cur=`git remote get-url "$origin" 2>/dev/null`; then
+            git remote add "${origin}" "${url}"
+        elif [ "${cur}" != "${url}" ]; then
+            error Repo URLs changed for "${dir}", use a workspace
+        fi
+
+       git remote set-branches "${origin}" ${branches}
+       git fetch -n --multiple "${origin}"
+       git checkout "${branch}"
+       git pull --rebase --autostash
+    else
+        info ${dir}: ${commit} is not a branch, not rebasing
+    fi
+
+    popd
+}
+
 build_tfa()
 {
     info Building TFA
@@ -57,7 +129,7 @@ build_tfa()
     # DEBUG=1 builds are currently too large, so always build TF-A as release.
     #
     pushd tf-a
-    export CROSS_COMPILE=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+    export CROSS_COMPILE=${TOOLS_PREFIX}
 
     if [[ x"${TFA_PLAT}" = x"rpi3" ]]; then
         DTB_BASE=0x10000
@@ -87,7 +159,7 @@ build_tfa()
 prep_edk2()
 {
     info Preping EDK2
-    export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+    export GCC5_AARCH64_PREFIX=${TOOLS_PREFIX}
     export WORKSPACE=${PWD}
     export PACKAGES_PATH=${PWD}/edk2:${PWD}/edk2-platforms:${PWD}/edk2-non-osi
     #
@@ -168,71 +240,10 @@ echo Workspace is ${BASEDIR}
 echo Building ${TYPE} for ${PLAT}
 cd ${BASEDIR}
 
-if [ ! -d "gcc5" ]; then
-    mkdir gcc5
-    pushd gcc5
-    wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-    tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-    popd
-fi
+sync_tools
 
-for dir in $repositories
-do
-    varname="$dir"
-    while [ "${varname%-*}" != "$varname" ]
-    do varname="${varname%%-*}_${varname#*-}"
-    done
-
-    url="$(eval echo "\"\$$varname\"")"
-
-    branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
-
-    commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
-
-    origin="${url#https://github.com/}"
-    origin="${origin%%/*}"
-
-    if [ x"${PLAT}" != x"rpi3" ]
-    then branch="${branches%% *}"
-    else branch="${branches##* }"
-    fi
-
-    commit_is_branch="false"
-    if [ -z "${commit}" ]; then
-        commit="remotes/${origin}/${branch}"
-        commit_is_branch="true"
-    fi
-
-    if [ ! -d "${dir}" ]; then
-        info ${dir}: checking out ${commit}
-        git clone --recursive -o "${origin}" -b "${branch}" --single-branch "${url}" "${dir}"
-        pushd "${dir}"
-        git remote set-branches "${origin}" ${branches}
-
-        if [ "${branches%% *}" != "${branches}" ]; then
-            git fetch -n --multiple "${origin}"
-        fi
-
-        git checkout --track "${commit}"
-    elif [[ x"${commit_is_branch}" = x"true" ]]; then
-        info ${dir}: rebasing to ${commit}
-        pushd "${dir}"
-
-        if ! cur=`git remote get-url "$origin" 2>/dev/null`; then
-            git remote add "${origin}" "${url}"
-        elif [ "${cur}" != "${url}" ]; then
-            error Repo URLs changed for "${dir}", use a workspace
-        fi
-
-       git remote set-branches "${origin}" ${branches}
-       git fetch -n --multiple "${origin}"
-       git checkout "${branch}"
-       git pull --rebase --autostash
-    else
-        info ${dir}: ${commit} is not a branch, not rebasing
-    fi
-
-    popd
+for dir in ${repositories}; do
+    sync_repo $dir
 done
 
 if [[ x"${PLAT}" = x"rpi3" ]]; then
