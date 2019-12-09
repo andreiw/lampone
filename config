@@ -24,7 +24,7 @@ edk2="https://github.com/pftf/edk2.git"
 edk2_branches="pi4_dev2"
 
 edk2_platforms="https://github.com/pftf/edk2-platforms.git"
-edk2_platforms_branches="pi4_dev2_acpi master"
+edk2_platforms_branches="pi4_dev2_acpi_next master"
 
 edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
 edk2_non_osi_branches="pi4_dev1 master"
