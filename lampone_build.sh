@@ -26,9 +26,10 @@ set -e
 usage()
 {
     echo
-    echo Usage: $0 [-d dir] [-p plat] [-t type]
+    echo Usage: $0 [-d dir] [-p plat] [-s] [-t type]
     echo "-d dir  - workspace directory to use (default rpi_fw)"    
     echo "-p plat - rpi4 (default) or rpi3"
+    echo "-s      - just synchronize/check-out, don't build"
     echo "-t type - DEBUG or RELEASE (default)"
     echo
     exit
@@ -37,13 +38,21 @@ usage()
 error()
 {
     echo
-    echo $0 error: $@ 1>&2
+    echo error: $@ 1>&2
     echo
     exit
 }
 
+info()
+{
+    echo
+    echo info: $@
+    echo
+}
+
 build_tfa()
 {
+    info Building TFA
     #
     # DEBUG=1 builds are currently too large, so always build TF-A as release.
     #
@@ -77,6 +86,8 @@ build_tfa()
 
 prep_edk2()
 {
+    info Preping EDK2
+    export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
     export WORKSPACE=${PWD}
     export PACKAGES_PATH=${PWD}/edk2:${PWD}/edk2-platforms:${PWD}/edk2-non-osi
     #
@@ -94,6 +105,7 @@ prep_edk2()
 
 build_edk2()
 {
+    info Building EDK2
     pushd edk2-platforms
     BUILD_COMMIT=`git rev-parse --short HEAD`
     popd
@@ -115,8 +127,9 @@ build_edk2()
 BASEDIR=rpi_fw
 TYPE=RELEASE
 PLAT=rpi4
+DO_BUILD="true"
 
-while getopts d:p:t: OPTION; do
+while getopts d:p:st: OPTION; do
     case ${OPTION} in
         d)
             BASEDIR=${OPTARG}
@@ -127,6 +140,9 @@ while getopts d:p:t: OPTION; do
             fi
                       
             PLAT=${OPTARG}
+            ;;
+        s)
+            DO_BUILD="false"
             ;;
         t)
             if [[ ! x"${OPTARG}" = x"DEBUG" ]] && [[ ! x"${OPTARG}" = x"RELEASE" ]]; then
@@ -152,6 +168,73 @@ echo Workspace is ${BASEDIR}
 echo Building ${TYPE} for ${PLAT}
 cd ${BASEDIR}
 
+if [ ! -d "gcc5" ]; then
+    mkdir gcc5
+    pushd gcc5
+    wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+    tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+    popd
+fi
+
+for dir in $repositories
+do
+    varname="$dir"
+    while [ "${varname%-*}" != "$varname" ]
+    do varname="${varname%%-*}_${varname#*-}"
+    done
+
+    url="$(eval echo "\"\$$varname\"")"
+
+    branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
+
+    commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
+
+    origin="${url#https://github.com/}"
+    origin="${origin%%/*}"
+
+    if [ x"${PLAT}" != x"rpi3" ]
+    then branch="${branches%% *}"
+    else branch="${branches##* }"
+    fi
+
+    commit_is_branch="false"
+    if [ -z "${commit}" ]; then
+        commit="remotes/${origin}/${branch}"
+        commit_is_branch="true"
+    fi
+
+    if [ ! -d "${dir}" ]; then
+        info ${dir}: checking out ${commit}
+        git clone --recursive -o "${origin}" -b "${branch}" --single-branch "${url}" "${dir}"
+        pushd "${dir}"
+        git remote set-branches "${origin}" ${branches}
+
+        if [ "${branches%% *}" != "${branches}" ]; then
+            git fetch -n --multiple "${origin}"
+        fi
+
+        git checkout --track "${commit}"
+    elif [[ x"${commit_is_branch}" = x"true" ]]; then
+        info ${dir}: rebasing to ${commit}
+        pushd "${dir}"
+
+        if ! cur=`git remote get-url "$origin" 2>/dev/null`; then
+            git remote add "${origin}" "${url}"
+        elif [ "${cur}" != "${url}" ]; then
+            error Repo URLs changed for "${dir}", use a workspace
+        fi
+
+       git remote set-branches "${origin}" ${branches}
+       git fetch -n --multiple "${origin}"
+       git checkout "${branch}"
+       git pull --rebase --autostash
+    else
+        info ${dir}: ${commit} is not a branch, not rebasing
+    fi
+
+    popd
+done
+
 if [[ x"${PLAT}" = x"rpi3" ]]; then
     UEFI_PLAT=RPi3
     TFA_PLAT=rpi3
@@ -160,75 +243,12 @@ else
     TFA_PLAT=rpi4
 fi
 
-if [ ! -d "gcc5" ]; then
-    mkdir gcc5
-    pushd gcc5
-    wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-    tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-    popd
+if [[ x"${DO_BUILD}" = x"true" ]]; then
+    build_tfa
+    prep_edk2
+    build_edk2
+else
+    info Not building as requested
 fi
-export GCC5_AARCH64_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-
-for dir in $repositories
-do
-	varname="$dir"
-	while [ "${varname%-*}" != "$varname" ]
-	do varname="${varname%%-*}_${varname#*-}"
-	done
-
-	url="$(eval echo "\"\$$varname\"")"
-
-	branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
-
-	commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
-
-	origin="${url#https://github.com/}"
-	origin="${origin%%/*}"
-
-	if [ x"${PLAT}" != x"rpi3" ]
-	then branch="${branches%% *}"
-	else branch="${branches##* }"
-	fi
-
-	if [ -z "${commit}" ]
-	then
-		commit="remotes/${origin}/${branch}"
-	fi
-
-	if [ ! -d "${dir}" ]
-	then
-		git clone --recursive -o "${origin}" -b "${branch}" --single-branch "${url}" "${dir}"
-		pushd "${dir}"
-		git remote set-branches "${origin}" ${branches}
-
-		if [ "${branches%% *}" != "${branches}" ]
-		then
-			git fetch -n --multiple "${origin}"
-		fi
-
-		git checkout --track "${commit}"
-	else
-		pushd "${dir}"
-
-		if ! cur=`git remote get-url "$origin" 2>/dev/null`
-		then
-			git remote add "${origin}" "${url}"
-		elif [ "${cur}" != "${url}" ]
-		then
-			error Repo URLs changed for "${dir}", use a workspace
-		fi
-
-		git remote set-branches "${origin}" ${branches}
-		git fetch -n --multiple "${origin}"
-		git checkout "${branch}"
-		git pull --rebase --autostash
-	fi
-
-	popd
-done
-
-build_tfa
-prep_edk2
-build_edk2
 
 exit
