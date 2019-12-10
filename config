@@ -32,3 +32,4 @@ edk2_non_osi_branches="pi4_dev1 master"
 tf_a="https://github.com/ARM-software/arm-trusted-firmware.git"
 tf_a_branches="master"
 
+rpi4_edk2_extra_flags="-D PL011_ENABLE=FALSE"

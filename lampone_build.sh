@@ -136,15 +136,15 @@ build_tfa()
     export CROSS_COMPILE=${TOOLS_PREFIX}
 
     if [[ x"${TFA_PLAT}" = x"rpi3" ]]; then
-        DTB_BASE=0x10000
-        BL33_BASE=0x30000
-        TARGETS="fip all"
-        TARGET_SRC="${PWD}/build/${PLAT}/release/bl1.bin ${PWD}/build/${PLAT}/release/fip.bin"
+        local DTB_BASE=0x10000
+        local BL33_BASE=0x30000
+        local TARGETS="fip all"
+        local TARGET_SRC="${PWD}/build/${PLAT}/release/bl1.bin ${PWD}/build/${PLAT}/release/fip.bin"
     else
-        DTB_BASE=0x20000
-        BL33_BASE=0x30000
-        TARGETS="all"
-        TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
+        local DTB_BASE=0x20000
+        local BL33_BASE=0x30000
+        local TARGETS="all"
+        local TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
     fi
 
     make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${TARGETS}
@@ -183,12 +183,13 @@ build_edk2()
 {
     info Building EDK2
     pushd edk2-platforms
-    BUILD_COMMIT=`git rev-parse --short HEAD`
+    local BUILD_COMMIT=`git rev-parse --short HEAD`
     popd
-    BUILD_DATE=`date +%m/%d/%Y`
-    NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
+    local BUILD_DATE=`date +%m/%d/%Y`
+    local NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
+    local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_edk2_extra_flags}\"")"
 
-    build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}"
+    build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}" ${EXTRA_FLAGS}
     if [[ $? -ne 0 ]]; then
         error UEFI build failed
     fi
