@@ -29,7 +29,17 @@ edk2_platforms_branches="pi4_dev2_acpi_next master"
 edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
 edk2_non_osi_branches="pi4_dev1 master"
 
-tf_a="https://github.com/ARM-software/arm-trusted-firmware.git"
-tf_a_branches="master"
+#
+# When building without PL011 support.
+#
+#tf_a="https://github.com/ARM-software/arm-trusted-firmware.git"
+#tf_a_branches="master"
+#rpi4_edk2_extra_flags="-D PL011_ENABLE=FALSE"
 
-rpi4_edk2_extra_flags="-D PL011_ENABLE=FALSE"
+#
+# When building with PL011 support.
+#
+tf_a="https://github.com/pbatard/arm-trusted-firmware"
+tf_a_branches="pi4 master"
+rpi4_edk2_extra_flags="-D PL011_ENABLE=TRUE"
+rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1"

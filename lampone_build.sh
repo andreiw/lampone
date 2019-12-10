@@ -146,8 +146,9 @@ build_tfa()
         local TARGETS="all"
         local TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
     fi
+    local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_tfa_extra_flags}\"")"
 
-    make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${TARGETS}
+    make PLAT=${TFA_PLAT} PRELOADED_BL33_BASE=${BL33_BASE} RPI3_PRELOADED_DTB_BASE=${DTB_BASE} SUPPORT_VFP=1 RPI3_USE_UEFI_MAP=1 DEBUG=0 V=1 ${EXTRA_FLAGS} ${TARGETS}
 
     if [[ $? -ne 0 ]]; then
         echo TF-A build failed
