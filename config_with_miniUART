@@ -2,7 +2,8 @@
 # Configuration for fetching/building RPi3/RPi4
 # firmware.
 #
-# Use this when building for RPi4 with PL011 console.
+# Use this when building for RPi4 without PL011 support,
+# using miniUART comnsole instead. Not recommended.
 #
 
 #
@@ -32,8 +33,7 @@ edk2_platforms_branches="pi4_dev2_acpi_next master"
 edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
 edk2_non_osi_branches="pi4_dev1 master"
 
-tf_a="https://github.com/pbatard/arm-trusted-firmware"
-tf_a_branches="pi4 master"
+tf_a="https://github.com/ARM-software/arm-trusted-firmware.git"
+tf_a_branches="master"
 
-rpi4_edk2_extra_flags="-D PL011_ENABLE=TRUE"
-rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1"
+rpi4_edk2_extra_flags="-D PL011_ENABLE=FALSE"

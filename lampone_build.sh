@@ -9,8 +9,13 @@
 #
 # Only tried in Ubuntu.
 #
-# Ex.:
+# Regular RPi4 build with PL011:
 #  ./lampone_build.sh -d lampone-wip/ -p rpi4 -t DEBUG
+#
+# RPi4 build with miniUART:
+#  ./lampone_build.sh -d lampone-wip/ -c ./config_with_miniUART -p rpi4 -t DEBUG
+#
+# RPi3 build (always with miniUART today):
 #  ./lampone_build.sh -d lampone-wip/ -p rpi3 -t RELEASE
 #
 # For Ubuntu, outside of make, python3 and a local toolchain:
@@ -20,19 +25,61 @@
 # Fail if a command fails
 set -e
 
-# Load configuration
-. $(dirname $(which "$0"))/config
+#
+# Defaults.
+#
+CONFIG_FILE_NAME=$(dirname $(which "$0"))/config
+BASEDIR=rpi_fw
+TYPE=RELEASE
+PLAT=rpi4
+DO_BUILD="true"
 
 usage()
 {
     echo
-    echo Usage: $0 [-d dir] [-p plat] [-s] [-t type]
-    echo "-d dir  - workspace directory to use (default rpi_fw)"    
-    echo "-p plat - rpi4 (default) or rpi3"
-    echo "-s      - just synchronize/check-out, don't build"
-    echo "-t type - DEBUG or RELEASE (default)"
+    echo Usage: $0  [-c config] [-d dir] [-p plat] [-s] [-t type]
+    echo "-c config - config file to use (default ${CONFIG_FILE_NAME})"
+    echo "-d dir    - workspace directory to use (default rpi_fw)"
+    echo "-p plat   - rpi4 (default) or rpi3"
+    echo "-s        - just synchronize/check-out, don't build"
+    echo "-t type   - DEBUG or RELEASE (default)"
     echo
     exit
+}
+
+handle_opt()
+{
+    local OPTION=$1
+    local OPTARG=$2
+
+    case ${OPTION} in
+        c)
+            CONFIG_FILE_NAME=${OPTARG}
+            ;;
+        d)
+            BASEDIR=${OPTARG}
+            ;;
+        p)
+            if [[ ! x"${OPTARG}" = x"rpi3" ]] && [[ ! x"${OPTARG}" = x"rpi4" ]]; then
+                usage
+            fi
+
+            PLAT=${OPTARG}
+            ;;
+        s)
+            DO_BUILD="false"
+            ;;
+        t)
+            if [[ ! x"${OPTARG}" = x"DEBUG" ]] && [[ ! x"${OPTARG}" = x"RELEASE" ]]; then
+                usage
+            fi
+
+            TYPE=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
 }
 
 error()
@@ -199,51 +246,29 @@ build_edk2()
     echo
 }
 
-#
-# Defaults.
-#
-BASEDIR=rpi_fw
-TYPE=RELEASE
-PLAT=rpi4
-DO_BUILD="true"
-
-while getopts d:p:st: OPTION; do
-    case ${OPTION} in
-        d)
-            BASEDIR=${OPTARG}
-            ;;
-        p)
-            if [[ ! x"${OPTARG}" = x"rpi3" ]] && [[ ! x"${OPTARG}" = x"rpi4" ]]; then
-                usage
-            fi
-                      
-            PLAT=${OPTARG}
-            ;;
-        s)
-            DO_BUILD="false"
-            ;;
-        t)
-            if [[ ! x"${OPTARG}" = x"DEBUG" ]] && [[ ! x"${OPTARG}" = x"RELEASE" ]]; then
-                usage
-            fi
-                      
-            TYPE=${OPTARG}
-            ;;
-        *)
-            usage
-            ;;
-    esac
+while getopts c:d:p:st: OPTION; do
+    handle_opt ${OPTION} ${OPTARG}
 done
 shift $((OPTIND - 1))
+
+echo Config is ${CONFIG_FILE_NAME}
+echo Workspace is ${BASEDIR}
+echo Building ${TYPE} for ${PLAT}
+
+#
+# Load configuration
+#
+if [ ! -f "${CONFIG_FILE_NAME}" ]; then
+    error Missing configuration file ${CONFIG_FILE_NAME}
+else
+    . ${CONFIG_FILE_NAME}
+fi
 
 BASEDIR=${PWD}/${BASEDIR}
 if [ ! -d "${BASEDIR}" ]; then
     echo Creating ${BASEDIR}
     mkdir ${BASEDIR}
 fi
-
-echo Workspace is ${BASEDIR}
-echo Building ${TYPE} for ${PLAT}
 cd ${BASEDIR}
 
 sync_tools
