@@ -203,7 +203,7 @@ build_tfa()
     fi
     echo
     echo TF-A artifacts are ${TARGET_SRC}
-    cp ${TARGET_SRC} ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
+    export TFA_ARTIFACT=${TARGET_SRC}
     echo
     popd
 }
@@ -236,6 +236,12 @@ build_edk2()
     local BUILD_DATE=`date +%m/%d/%Y`
     local NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
     local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_edk2_extra_flags}\"")"
+
+    if [[ x"${PLAT}" = x"rpi3" ]]; then
+        cp ${TFA_ARTIFACT} ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
+    else
+        EXTRA_FLAGS+=" -D TFA_BUILD_ARTIFACT=${TFA_ARTIFACT}"
+    fi
 
     build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}" ${EXTRA_FLAGS}
     if [[ $? -ne 0 ]]; then
