@@ -1,0 +1,39 @@
+#
+# Configuration for fetching/building RPi3/RPi4
+# firmware.
+#
+# Use this when building for RPi4 with PL011 console.
+#
+
+#
+# Repository configuration.
+#
+
+### List of repositories to check out
+repositories="edk2 edk2-platforms edk2-non-osi tf-a"
+
+### Configuration of individual repositories
+
+#directives:
+#<repo>="<some url>"
+#<repo>_branches="<list of branches to check out>"
+#<repo>_commit_id="<specific commit to check out>"
+
+# NOTE: <repo>_branches settings MUST be present and MUST include at least one
+# branch.  If more than one branch is listed, the branch for the RP4 must be
+# first and the branch for the RP3 must be last.
+
+edk2="https://github.com/pftf/edk2.git"
+edk2_branches="pi4_dev3"
+
+edk2_platforms="https://github.com/pftf/edk2-platforms.git"
+edk2_platforms_branches="pi4_dev3 master"
+
+edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
+edk2_non_osi_branches="pi4_dev3 master"
+
+tf_a="https://github.com/pbatard/arm-trusted-firmware"
+tf_a_branches="pi4 master"
+
+rpi4_edk2_extra_flags="-D PL011_ENABLE=TRUE -D ACPI_BASIC_MODE_ENABLE=FALSE"
+rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1"
