@@ -33,6 +33,7 @@ BASEDIR=rpi_fw
 TYPE=RELEASE
 PLAT=rpi4
 DO_BUILD="true"
+DO_SYNC="true"
 
 usage()
 {
@@ -42,7 +43,9 @@ usage()
     echo "-d dir    - workspace directory to use (default rpi_fw)"
     echo "-p plat   - rpi4 (default) or rpi3"
     echo "-s        - just synchronize/check-out, don't build"
+    echo "-S        - just build, don't synchronize/check-out"
     echo "-t type   - DEBUG or RELEASE (default)"
+    echo "-T prefix - tools prefix (default downloads Linaro tools)"
     echo
     exit
 }
@@ -69,12 +72,18 @@ handle_opt()
         s)
             DO_BUILD="false"
             ;;
+        S)
+            DO_SYNC="false"
+            ;;
         t)
             if [[ ! x"${OPTARG}" = x"DEBUG" ]] && [[ ! x"${OPTARG}" = x"RELEASE" ]]; then
                 usage
             fi
 
             TYPE=${OPTARG}
+            ;;
+        T)
+            TOOLS_PREFIX=${OPTARG}
             ;;
         *)
             usage
@@ -108,8 +117,6 @@ sync_tools()
     fi
 
     TOOLS_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-
-    info Tools are ${TOOLS_PREFIX}
 }
 
 sync_repo()
@@ -252,7 +259,7 @@ build_edk2()
     echo
 }
 
-while getopts c:d:p:st: OPTION; do
+while getopts c:d:p:sSt:T: OPTION; do
     handle_opt ${OPTION} ${OPTARG}
 done
 shift $((OPTIND - 1))
@@ -274,14 +281,22 @@ BASEDIR=${PWD}/${BASEDIR}
 if [ ! -d "${BASEDIR}" ]; then
     echo Creating ${BASEDIR}
     mkdir ${BASEDIR}
+    DO_SYNC="true"
 fi
 cd ${BASEDIR}
 
-sync_tools
+if [[ x"${DO_SYNC}" = x"true" ]]; then
+    if [ x"${TOOLS_PREFIX}" = x"" ]; then
+        sync_tools
+    fi
+    info Tools are ${TOOLS_PREFIX}
 
-for dir in ${repositories}; do
-    sync_repo $dir
-done
+    for dir in ${repositories}; do
+        sync_repo $dir
+    done
+else
+    info Not syncing as requested
+fi
 
 if [[ x"${PLAT}" = x"rpi3" ]]; then
     UEFI_PLAT=RPi3
