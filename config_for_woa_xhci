@@ -27,7 +27,7 @@ edk2="https://github.com/pftf/edk2.git"
 edk2_branches="pi4_dev3"
 
 edk2_platforms="https://github.com/pftf/edk2-platforms.git"
-edk2_platforms_branches="pi4_dev4_andreiw_fake_ecam_is_a_dead_end master"
+edk2_platforms_branches="pi4_dev4_andreiw_xhci_woa_investigation master"
 
 edk2_non_osi="https://github.com/pftf/edk2-non-osi.git"
 edk2_non_osi_branches="pi4_dev3 master"
@@ -36,4 +36,4 @@ tf_a="https://github.com/pbatard/arm-trusted-firmware"
 tf_a_branches="pi4 master"
 
 rpi4_edk2_extra_flags="-D PL011_ENABLE=TRUE -D ACPI_BASIC_MODE_ENABLE=TRUE"
-rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1 HANDLE_EA_EL3_FIRST=1"
+rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1"
