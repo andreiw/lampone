@@ -106,14 +106,20 @@ info()
     echo
 }
 
-sync_tools()
+remote_tools()
 {
-    if [ ! -d "gcc5" ]; then
-        mkdir gcc5
-        pushd gcc5
-        wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-        tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
-        popd
+    local do_sync=$1
+
+    if [[ x"${do_sync}" = x"true" ]]; then
+        if [ ! -d "gcc5" ]; then
+            mkdir gcc5
+            pushd gcc5
+            wget https://releases.linaro.org/components/toolchain/binaries/7.2-2017.11/aarch64-linux-gnu/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+            tar -xf gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu.tar.xz
+            popd
+        fi
+    else
+        info Not fetching tools
     fi
 
     TOOLS_PREFIX=${BASEDIR}/gcc5/gcc-linaro-7.2.1-2017.11-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
@@ -193,12 +199,12 @@ build_tfa()
         local DTB_BASE=0x10000
         local BL33_BASE=0x30000
         local TARGETS="fip all"
-        local TARGET_SRC="${PWD}/build/${PLAT}/release/bl1.bin ${PWD}/build/${PLAT}/release/fip.bin"
+        local TARGET_SRC="${PWD}/build/${PLAT}/release"
     else
         local DTB_BASE=0x20000
         local BL33_BASE=0x30000
         local TARGETS="all"
-        local TARGET_SRC="${PWD}/build/${PLAT}/release/bl31.bin"
+        local TARGET_SRC="${PWD}/build/${PLAT}/release"
     fi
     local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_tfa_extra_flags}\"")"
 
@@ -209,8 +215,8 @@ build_tfa()
         exit
     fi
     echo
-    echo TF-A artifacts are ${TARGET_SRC}
-    export TFA_ARTIFACT=${TARGET_SRC}
+    echo TF-A artifacts are in ${TARGET_SRC}
+    export TFA_ARTIFACTS=${TARGET_SRC}
     echo
     popd
 }
@@ -245,9 +251,10 @@ build_edk2()
     local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_edk2_extra_flags}\"")"
 
     if [[ x"${PLAT}" = x"rpi3" ]]; then
-        cp ${TFA_ARTIFACT} ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
+        cp ${TFA_ARTIFACTS}/bl1.bin ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
+        cp ${TFA_ARTIFACTS}/fip.bin ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
     else
-        EXTRA_FLAGS+=" -D TFA_BUILD_ARTIFACT=${TFA_ARTIFACT}"
+        EXTRA_FLAGS+=" -D TFA_BUILD_ARTIFACTS=${TFA_ARTIFACTS}"
     fi
 
     build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}" ${EXTRA_FLAGS}
@@ -285,17 +292,17 @@ if [ ! -d "${BASEDIR}" ]; then
 fi
 cd ${BASEDIR}
 
-if [[ x"${DO_SYNC}" = x"true" ]]; then
-    if [ x"${TOOLS_PREFIX}" = x"" ]; then
-        sync_tools
-    fi
-    info Tools are ${TOOLS_PREFIX}
+if [ x"${TOOLS_PREFIX}" = x"" ]; then
+    remote_tools ${DO_SYNC}
+fi
+info Tools are ${TOOLS_PREFIX}
 
+if [[ x"${DO_SYNC}" = x"true" ]]; then
     for dir in ${repositories}; do
         sync_repo $dir
     done
 else
-    info Not syncing as requested
+    info Not repos syncing as requested
 fi
 
 if [[ x"${PLAT}" = x"rpi3" ]]; then
