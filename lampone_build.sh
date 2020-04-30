@@ -136,7 +136,7 @@ sync_repo()
     local url="$(eval echo "\"\$$varname\"")"
     local branches="$(eval echo "\"\${${varname}_branches:-master}\"")"
     local commit="$(eval echo "\"\${${varname}_commit_id:-}\"")"
-    local origin="${url#https://github.com/}"
+    local origin="${url#https://*/}"
     origin="${origin%%/*}"
     local commit_is_branch="false"
     local branch="${branches%% *}"
@@ -196,13 +196,13 @@ build_tfa()
     export CROSS_COMPILE=${TOOLS_PREFIX}
 
     if [[ x"${TFA_PLAT}" = x"rpi3" ]]; then
-        local DTB_BASE=0x10000
         local BL33_BASE=0x30000
+        local DTB_BASE=0x10000
         local TARGETS="fip all"
         local TARGET_SRC="${PWD}/build/${PLAT}/release"
     else
-        local DTB_BASE=0x20000
-        local BL33_BASE=0x30000
+        local BL33_BASE=0x20000
+        local DTB_BASE=0x1f0000
         local TARGETS="all"
         local TARGET_SRC="${PWD}/build/${PLAT}/release"
     fi
@@ -249,13 +249,10 @@ build_edk2()
     local BUILD_DATE=`date +%m/%d/%Y`
     local NUM_CPUS=$((`getconf _NPROCESSORS_ONLN` + 2))
     local EXTRA_FLAGS="$(eval echo "\"\${${PLAT}_edk2_extra_flags}\"")"
-
-    if [[ x"${PLAT}" = x"rpi3" ]]; then
-        cp ${TFA_ARTIFACTS}/bl1.bin ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
-        cp ${TFA_ARTIFACTS}/fip.bin ${BASEDIR}/edk2-non-osi/Platform/RaspberryPi/${UEFI_PLAT}/TrustedFirmware
-    else
-        EXTRA_FLAGS+=" -D TFA_BUILD_ARTIFACTS=${TFA_ARTIFACTS}"
-    fi
+    #
+    # Since we always build TF-A, always override the checked-in binaries in edk2.
+    #
+    EXTRA_FLAGS+=" -D TFA_BUILD_ARTIFACTS=${TFA_ARTIFACTS}"
 
     build -n ${NUM_CPUS} -a AARCH64 -t GCC5 -b ${TYPE} -p edk2-platforms/Platform/RaspberryPi/${UEFI_PLAT}/${UEFI_PLAT}.dsc --pcd gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString=L"Lampone ${BUILD_COMMIT} on ${BUILD_DATE}" ${EXTRA_FLAGS}
     if [[ $? -ne 0 ]]; then

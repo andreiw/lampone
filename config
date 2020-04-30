@@ -32,8 +32,10 @@ edk2_platforms_branches="master"
 edk2_non_osi="https://github.com/tianocore/edk2-non-osi.git"
 edk2_non_osi_branches="master"
 
-tf_a="https://github.com/pbatard/arm-trusted-firmware"
-tf_a_branches="pi4 master"
+#tf_a="https://github.com/pbatard/arm-trusted-firmware"
+#tf_a_branches="pi4 master"
+tf_a="https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git"
+tf_a_branches="master"
 
 rpi4_edk2_extra_flags=""
-rpi4_tfa_extra_flags="RPI3_USE_PL011_UART=1"
+rpi4_tfa_extra_flags=""

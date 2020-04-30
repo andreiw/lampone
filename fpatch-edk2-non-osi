@@ -1,0 +1,1 @@
+git format-patch --cover-letter --notes --subject-prefix="edk2-non-osi][PATCH" --stat=1000 --stat-graph-width=20 -M tianocore/master -$1 HEAD

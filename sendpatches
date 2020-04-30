@@ -1,1 +1,1 @@
-git send-email -cc=ard.biesheuvel@linaro.org -cc=leif@nuviainc.com -cc=pete@akeo.ie -cc=philmd@redhat.com  --suppress-cc=author --suppress-cc=self --suppress-cc=cc --suppress-cc=sob *.patch
+git send-email -to=devel@edk2.groups.io -cc=ard.biesheuvel@arm.com -cc=leif@nuviainc.com -cc=pete@akeo.ie -cc=philmd@redhat.com  --suppress-cc=author --suppress-cc=self --suppress-cc=cc --suppress-cc=sob *.patch
