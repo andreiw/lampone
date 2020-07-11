@@ -1,0 +1,1 @@
+git send-email -to=devel@edk2.groups.io -cc=maciej.rabeda@linux.intel.com -cc=jiaxin.wu@intel.com -cc=siyuan.fu@intel.com --suppress-cc=author --suppress-cc=self --suppress-cc=cc --suppress-cc=sob *.patch
