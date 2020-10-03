@@ -40,7 +40,7 @@ usage()
     echo
     echo Usage: $0  [-c config] [-d dir] [-p plat] [-s] [-t type]
     echo "-c config - config file to use (default ${CONFIG_FILE_NAME})"
-    echo "-d dir    - workspace directory to use (default rpi_fw)"
+    echo "-d dir    - workspace directory to use (default ${BASEDIR})"
     echo "-p plat   - rpi4 (default) or rpi3"
     echo "-s        - just synchronize/check-out, don't build"
     echo "-S        - just build, don't synchronize/check-out"

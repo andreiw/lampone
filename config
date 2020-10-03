@@ -37,5 +37,5 @@ edk2_non_osi_branches="master"
 tf_a="https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git"
 tf_a_branches="master"
 
-rpi4_edk2_extra_flags=""
+rpi4_edk2_extra_flags="-D INCLUDE_TFTP_COMMAND=TRUE"
 rpi4_tfa_extra_flags=""
