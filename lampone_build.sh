@@ -18,8 +18,8 @@
 # RPi3 build (always with miniUART today):
 #  ./lampone_build.sh -d lampone-wip/ -p rpi3 -t RELEASE
 #
-# For Ubuntu, outside of make, python3 and a local toolchain:
-# $ apt-get update && apt-get install -y uuid-dev iasl
+# For Ubuntu/Debian, outside of make, python3 and a local toolchain:
+# $ apt-get update && apt-get install -y uuid-dev iasl python3-distutils libssl-dev
 #
 
 # Fail if a command fails
